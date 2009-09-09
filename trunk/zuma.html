@@ -1,0 +1,179 @@
+<html>
+<head>
+<script type="text/javascript">
+
+// Math classes & funcs
+
+function point2d(x, y)
+{
+	this.x = x;
+	this.y = y;
+}
+
+function bezier_path(p0, p1, p2, p3)
+{
+	this.p0 = p0;
+	this.p1 = p1;
+	this.p2 = p2;
+	this.p3 = p3;
+}
+
+function ball(init_pos)
+{
+	this.pos = init_pos;
+	this.curr_c = 0; // current curve
+	this.curr_t = 0; // current t
+	this.curr_inc = 0; // current increment
+	
+	this.move = move;
+}
+
+function move()
+{
+	with (this)
+	{
+		pos = cubic_bezier( path[curr_c], curr_t );
+
+		if ( curr_t > 1 )
+		{
+			curr_c = (curr_c + 1 + path.length) % path.length;
+
+			curr_inc = 2 / curve_lengths[curr_c];
+			
+			curr_t = 0;
+		}
+	
+		curr_t += curr_inc;
+	}
+}
+
+function distance(p1, p2)
+{
+	return Math.sqrt( (p1.x - p2.x) * (p1.x - p2.x) +
+					  (p1.y - p2.y) * (p1.y - p2.y) );
+}
+
+function calculate_curve_length(bc)
+{
+	var len = 0;
+	var tp1 = new point2d(0,0),
+		tp2 = new point2d(0,0); // temporary points
+	
+	tp1 = cubic_bezier(bc, 0);
+	
+	for (f=0.01; f<1; f+=0.01)
+	{
+		tp2 = cubic_bezier(bc, f);
+		
+		len += distance( tp1, tp2 );
+		
+		tp1 = tp2; 
+	}
+	
+	debug(len);
+	
+	return len;
+}
+
+var path = Array (	new bezier_path( new point2d(5,5), new point2d(25,5), new point2d(45,25), new point2d(45,45) ),
+					new bezier_path( new point2d(45,45), new point2d(45,65), new point2d(65,85), new point2d(85,85) ),
+					new bezier_path( new point2d(85,85), new point2d(105,85), new point2d(125,105), new point2d(125,125) ),
+					new bezier_path( new point2d(125,125), new point2d(5,125), new point2d(5,125), new point2d(5,5) ) );
+
+function cubic_bezier(bp, t)
+{
+	var p = new point2d(0, 0);
+	
+	t0 = (1-t) * (1-t) * (1-t);
+	t1 = 3 * (1-t) * (1-t) * t;
+	t2 = 3 * (1-t) * t * t;
+	t3 = t * t * t;
+	
+	p.x = bp.p0.x * t0 + bp.p1.x * t1 + bp.p2.x * t2 + bp.p3.x * t3;
+	p.y = bp.p0.y * t0 + bp.p1.y * t1 + bp.p2.y * t2 + bp.p3.y * t3;
+	
+	return p;
+}
+
+// HTML funcs
+
+function debug(str)
+{
+	elm("debug").innerHTML = str;
+}
+
+function elm(id)
+{
+	return document.getElementById( id );
+}
+
+var offset = new point2d(100, 100);
+
+var curve_lengths = Array();
+
+function move_all()
+{
+	for (b in balls)
+	{
+		balls[b].move();
+		
+		elm("ball" + b).style.left = Math.round(offset.x + balls[b].pos.x) + "px";
+		elm("ball" + b).style.top = Math.round(offset.y + balls[b].pos.y) + "px";
+	}
+	
+	setTimeout( "move_all()", 20 );
+}
+
+var n_ball = 3;
+var balls = Array();
+
+function init()
+{
+	for (c in path)
+		curve_lengths[c] = calculate_curve_length( path[c] );
+	
+	for (i=0; i<n_ball; i++)
+	{
+		balls[i] = new ball( new point2d(0, 0) );
+		
+		balls[i].curr_inc = 2 / curve_lengths[0];
+		
+		balls[i].curr_t = balls[i].curr_inc * i * 10;
+		
+		elm("ga").innerHTML = elm("ga").innerHTML + '<img src="ball.png" class="ball" id="ball' + i + ' />';
+	}	
+	
+	move_all();
+}
+
+</script>
+
+<style type="text/css">
+
+.ball
+{
+	position: absolute;
+	border: 0px;
+}
+
+#debug
+{
+	position: absolute;
+	right: 0px;
+	top: 10px;
+	width: 600px;
+	background-color: #eee;
+}
+</style>
+</head>
+
+<body onload="init()">
+
+<div id="ga" title="Game Area" >
+</div>
+
+<div id="debug">- start -</div>
+
+</body>
+
+</html>
